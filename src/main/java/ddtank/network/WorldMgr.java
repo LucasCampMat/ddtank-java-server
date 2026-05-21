@@ -41,5 +41,37 @@ public class WorldMgr {
             }
         }
     }
+    // ADICIONE ESTE MÉTODO ANTES DA ÚLTIMA CHAVE DE FECHAMENTO DO SEU WORLDMGR.JAVA:
+    /**
+     * Varre a memória RAM em busca de um jogador online que possua o Nickname enviado.
+     * Retorna null caso o jogador esteja offline.
+     */
+    public static GamePlayer getPlayerByNickname(String nickname) {
+        if (nickname == null || nickname.isEmpty()) return null;
+
+        for (GamePlayer player : onlinePlayers.values()) {
+            if (player.getPlayerData().getNickname().equalsIgnoreCase(nickname)) {
+                return player;
+            }
+        }
+        return null;
+    }
+
+    // ADICIONE ESTE MÉTODO ANTES DA ÚLTIMA CHAVE DE FECHAMENTO DO SEU WORLDMGR.JAVA:
+    /**
+     * Transmite um pacote de dados exclusivamente para os membros que pertencem à guilda especificada
+     * e que estão ativamente online no servidor.
+     */
+    public static void broadcastToGuild(String guildName, GSPacketIn packet) {
+        if (guildName == null || guildName.isEmpty()) return;
+
+        for (GamePlayer player : onlinePlayers.values()) {
+            String pGuild = player.getPlayerData().getGuildName();
+            if (pGuild != null && pGuild.equalsIgnoreCase(guildName)) {
+                player.sendPacket(packet);
+            }
+        }
+    }
+
 }
 

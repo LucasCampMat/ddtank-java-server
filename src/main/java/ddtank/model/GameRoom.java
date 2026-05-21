@@ -187,5 +187,118 @@ public class GameRoom {
             }
         }
     }
+    // ADICIONE ESTES CAMPOS E MÉTODOS ANTES DA ÚLTIMA CHAVE DE FECHAMENTO DO SEU GAMEROOM.JAVA:
+    private double currentWind = 0.0;
+
+    public double getCurrentWind() {
+        return currentWind;
+    }
+
+    /**
+     * Define o vento atual da sala (Ex: -2.4 ou 3.1)
+     */
+    public void setCurrentWind(double wind) {
+        // Limita matematicamente para ter apenas uma casa decimal, idêntico ao jogo clássico
+        this.currentWind = Math.round(wind * 10.0) / 10.0;
+    }
+
+    // ADICIONE ESTE MÉTODO ANTES DA ÚLTIMA CHAVE DE FECHAMENTO DO SEU GAMEROOM.JAVA:
+    /**
+     * Calcula o impacto físico da explosão no terreno cartesiano.
+     * Desloca jogadores afetados para baixo (queda) ou elimina-os se caírem no abismo.
+     */
+    public void checkTerrainDestruction(int bombX, int bombY, int radius) {
+        for (GamePlayer player : slots.values()) {
+            if (!player.isAlive()) continue;
+
+            // Calcula a distância horizontal entre a explosão e o jogador
+            int distanceX = Math.abs(player.getPosX() - bombX);
+
+            // Se o jogador estiver dentro do raio horizontal do buraco aberto pela bomba
+            if (distanceX <= radius) {
+                // Simula a perda de terreno: o chão cede e o Y aumenta (DDTank adota Y para baixo)
+                int newY = player.getPosY() + (radius - distanceX / 2);
+
+                // Limite clássico do abismo do cenário (ex: Y maior que 900 significa queda livre para a morte)
+                if (newY >= 900) {
+                    player.takeDamage(player.getMaxHp()); // Eliminação instantânea por queda no limbo
+                    System.out.println("🕳️ [Física] " + player.getPlayerData().getNickname() + " caiu no abismo e morreu!");
+                } else {
+                    player.setPosY(newY); // Atualiza a nova posição de pouso do jogador
+                    System.out.println("🕳️ [Física] Terreno destruído! Novo Y de " + player.getPlayerData().getNickname() + ": " + newY);
+                }
+
+                // Transmite o pacote de atualização de posição forçada por queda (OpCode 92) para a sala sincronizar
+                GSPacketIn fallPacket = new GSPacketIn((short) 92);
+                fallPacket.writeInt(player.getPlayerData().getId().intValue());
+                fallPacket.writeInt(player.getPosX());
+                fallPacket.writeInt(player.getPosY());
+                fallPacket.writeByte(player.getDirection());
+                broadcastToRoom(fallPacket);
+            }
+        }
+    }
+    // ADICIONE ESTES COMPONENTES ANTES DA ÚLTIMA CHAVE DE FECHAMENTO DO SEU GAMEROOM.JAVA:
+    private final java.util.concurrent.CopyOnWriteArrayList<GameNpc> npcs = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public java.util.concurrent.CopyOnWriteArrayList<GameNpc> getNpcs() {
+        return npcs;
+    }
+
+    /**
+     * Inicializa os monstros no mapa com base nas configurações que semeamos no MySQL
+     */
+    public void spawnNpcs(int count) {
+        npcs.clear();
+        for (int i = 1; i <= count; i++) {
+            // Nasce os Bogus espalhados cartesianamente pelo cenário do mapa
+            npcs.add(new GameNpc(i, "Bogu Guerreiro #" + i, 400 + (i * 80), 350));
+        }
+        System.out.println("🤖 [PvE AI] " + count + " monstros nasceram no mapa da Sala #" + roomId);
+    }
+
+    /**
+     * Motor de Inteligência Artificial: Processa o turno de ataque de todos os monstros vivos
+     */
+    public void processNpcTurn() {
+        if (!isPlaying) return;
+
+        for (GameNpc npc : npcs) {
+            if (!npc.isAlive()) continue;
+
+            // 1. Localiza o jogador vivo mais próximo no mapa cartesiano (Algoritmo de Proximidade do C#)
+            GamePlayer targetPlayer = null;
+            double shortestDistance = Double.MAX_VALUE;
+
+            for (GamePlayer p : slots.values()) {
+                if (p.isAlive()) {
+                    double dist = Math.abs(p.getPosX() - npc.getPosX());
+                    if (dist < shortestDistance) {
+                        shortestDistance = dist;
+                        targetPlayer = p;
+                    }
+                }
+            }
+
+            // 2. Se encontrou um alvo válido, executa a ação de IA
+            if (targetPlayer != null) {
+                // Simula o monstro caminhando na direção do jogador
+                int walkDirection = (targetPlayer.getPosX() > npc.getPosX()) ? 1 : -1;
+                npc.setPosX(npc.getPosX() + (walkDirection * 30)); // Anda 30 pixels
+
+                // Aplica o dano físico do monstro diretamente na saúde do jogador em memória RAM
+                targetPlayer.takeDamage(npc.getDamage());
+                System.out.println("🤖 [PvE AI] " + npc.getName() + " andou e atacou " + targetPlayer.getPlayerData().getNickname() + " causando -" + npc.getDamage() + " HP!");
+
+                // Transmite os pacotes binários de animação de ataque e dano simultaneamente para a sala
+                GSPacketIn npcActionPacket = new GSPacketIn((short) 99);
+                npcActionPacket.writeInt(targetPlayer.getPlayerData().getId().intValue());
+                npcActionPacket.writeInt(targetPlayer.getCurrentHp());
+                npcActionPacket.writeBoolean(targetPlayer.isAlive());
+                broadcastToRoom(npcActionPacket);
+            }
+        }
+    }
+
 
 }

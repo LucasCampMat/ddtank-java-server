@@ -127,4 +127,16 @@ public class Player {
         return false;
     }
 
+    // ADICIONE ESTES COMPONENTES ANTES DA ÚLTIMA CHAVE DE FECHAMENTO DO SEU PLAYER.JAVA:
+    private String guildName; // Nome da guilda/clã do jogador (Pode ser null se estiver sem clã)
+
+    public String getGuildName() {
+        return guildName;
+    }
+
+    public void setGuildName(String guildName) {
+        this.guildName = guildName;
+    }
+
+
 }

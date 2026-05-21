@@ -11,13 +11,15 @@ public class GamePlayer {
     private int posY = 0;
     private int direction = 1;
 
+    // ADICIONADO: Atributo de Ângulo do canhão de disparo (Padrão: 30 graus)
+    private int angle = 30;
+
     private int maxHp = 1000;
     private int currentHp = 1000;
     private boolean isAlive = true;
 
-    // ADICIONADO: Atributos de modificadores de combate (Buffs de itens)
-    private double activeDamageMultiplier = 1.0; // Padrão: 100% de dano
-    private int bonusShootCount = 1;             // Padrão: 1 tiro por rodada
+    private double activeDamageMultiplier = 1.0;
+    private int bonusShootCount = 1;
 
     public GamePlayer(ChannelHandlerContext ctx, Player playerData) {
         this.ctx = ctx;
@@ -36,6 +38,9 @@ public class GamePlayer {
     public int getDirection() { return direction; }
     public void setDirection(int direction) { this.direction = direction; }
 
+    public int getAngle() { return angle; }
+    public void setAngle(int angle) { this.angle = angle; }
+
     public int getMaxHp() { return maxHp; }
     public int getCurrentHp() { return currentHp; }
     public boolean isAlive() { return isAlive; }
@@ -52,20 +57,18 @@ public class GamePlayer {
     public void resetBattleStats() {
         this.currentHp = this.maxHp;
         this.isAlive = true;
+        this.angle = 30; // Reseta o ângulo padrão ao entrar em combate
         clearBuffs();
     }
 
-    // ADICIONADO: Ativa o multiplicador de dano (Ex: item de +50% vira 1.5)
     public void addDamageMultiplier(double multiplier) {
         this.activeDamageMultiplier *= multiplier;
     }
 
-    // ADICIONADO: Adiciona tiros extras na rodada (Ex: item de 2x tiros)
     public void addBonusShoots(int count) {
         this.bonusShootCount += count;
     }
 
-    // ADICIONADO: Limpa os consumíveis usados para a próxima rodada zerar
     public void clearBuffs() {
         this.activeDamageMultiplier = 1.0;
         this.bonusShootCount = 1;
